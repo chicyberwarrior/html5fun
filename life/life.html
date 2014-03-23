@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <style>
+    </style>
+</head>
+<body>
+<canvas id="canvas1" width="100%" ></canvas>
+</body>
+<script>
+
+    window.canvas = document.getElementById("canvas1");
+    window.ctx = window.canvas.getContext("2d");
+
+    // Resize canvas to match full page
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // This is size of each cell. The smaller it is the cooler it looks, but it take much more processing power
+    cellSize = 10;
+
+    // Some settings for the grid, if used
+    grid = {
+        lineWidth: 1,
+        width: window.canvas.width,
+        height: window.canvas.height,
+        rows: window.canvas.height / cellSize,
+        cols: window.canvas.width / cellSize
+
+    };
+
+    // State is always in arr1, arr2 is used as scratch space. Both will be flipped on each generation.
+    var arr1 = init_array(grid.cols, grid.width);
+    var arr2 = init_array(grid.cols, grid.width);
+
+
+    // Init 2d array to 0 values
+    function init_array(w, h) {
+        var f = new Array();
+
+        for (i=0;i<w;i++) {
+            f[i]=new Array();
+            for (j=0;j<h;j++) {
+                f[i][j]=0;
+            }
+        }
+        return f;
+    }
+
+    // Get random int between min and max
+    function getRandomArbitary (min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // Assign random values to cells in 2d array
+    function randomize_array(arr) {
+
+        var seedRangeX = grid.cols; //60;
+        var seedRangeY = grid.rows; //60;
+        var seedStartX = 0;//getRandomArbitary(0, grid.cols);
+        var seedStartY = 0;//getRandomArbitary(0, grid.rows);
+
+        var seedEndX = seedStartX + seedRangeX;
+        var seedEndY = seedStartY + seedRangeY;
+
+        if(seedEndX >= grid.cols - 1)
+            seedEndX = grid.cols - 1;
+
+        if(seedEndY >= grid.rows - 1)
+            seedEndY = grid.rows - 1;
+
+        for(var x = seedStartX; x < seedEndX; x++) {
+            for(var y = seedStartY; y < seedEndY; y++) {
+                var isOn = getRandomArbitary(0, 1);
+                arr[x][y] = isOn;
+            }
+        }
+
+    }
+
+    // Counts live neighbours of a cell
+    function getNeighbours(x,y) {
+
+        var c = 0;
+
+        if(x > 0) {
+            if(y > 0)
+                if(arr1[x - 1][y - 1] == 1) c++;
+            if(arr1[x - 1][y    ] == 1) c++;
+            if(y < grid.rows - 2)
+                if(arr1[x - 1][y + 1] == 1) c++;
+        }
+
+        if(x < grid.cols - 2) {
+            if(y > 0)
+                if(arr1[x + 1][y - 1] == 1) c++;
+            if(arr1[x + 1][y    ] == 1) c++;
+            if(y < grid.rows - 2)
+                if(arr1[x + 1][y + 1] == 1) c++;
+        }
+
+
+        if(y > 0)
+            if(arr1[x    ][y - 1] == 1) c++;
+
+        if(y < grid.rows - 2)
+            if(arr1[x    ][y + 1] == 1) c++;
+
+        return c;
+    }
+
+    // Swap arrays
+    function rotate_arrays() {
+        var arr = arr2;
+        arr2 = arr1;
+        arr1 = arr;
+    }
+
+    function draw_grid() {
+        ctx.beginPath();
+
+        ctx.lineWidth = grid.lineWidth;
+        ctx.strokeStyle = "#C0C0C0";
+
+        for(var i = 0; i <  grid.width; i += cellSize) {
+            ctx.moveTo(i,0);
+            ctx.lineTo(i,grid.height);
+        }
+
+        for(var i = 0; i <  grid.height; i += cellSize) {
+            ctx.moveTo(0, i);
+            ctx.lineTo(grid.width, i);
+        }
+
+        ctx.closePath();
+        ctx.stroke();
+    }
+
+    // Fills a cell
+    function fill_square(x, y) {
+        ctx.rect(x * cellSize + grid.lineWidth, y * cellSize + grid.lineWidth, cellSize - 2 * grid.lineWidth, cellSize - 2 * grid.lineWidth);
+    }
+
+
+    // This is the life of game logic. Using arr1 that has some state, it generates new state in arr2.
+    function tick() {
+        for(var x = 0; x < grid.cols; x++) {
+            for(var y = 0; y < grid.rows; y++) {
+
+                // If current cell is live...
+                if(arr1[x][y] == 1) {
+                    var numN = getNeighbours(x,y);
+
+                    // ...it dies of starvation if has less than 2 neighbors
+                    if(numN < 2) {
+                        arr2[x][y] = 0;
+                    }
+
+                    // ...it also dies of overpopulation if it has more than 3 neighbors
+                    else if(numN > 3) {
+                        arr2[x][y] = 0;
+                    }
+
+                    // but if it has 2 or 3 neighbors, it survives to the next generation
+                    else {
+                        arr2[x][y] = 1;
+                    }
+                }
+
+                // If current cell is dead, it can become live if it has exactly 3 living neighbors
+                else {
+                    var numN = getNeighbours(x,y);
+                    if( numN == 3 ) {
+                        arr2[x][y] = 1;
+                    }
+                }
+            }
+        }
+    }
+
+
+
+    // Uncomment the below to get totally random board
+    // randomize_array(arr1);
+
+    // example initial seed
+    {
+        var middleX = Math.floor(grid.cols / 2);
+        var middleY = Math.floor(grid.rows / 2);
+
+        arr1[middleX + 0][middleY + 0] = 1;
+        arr1[middleX + 1][middleY + 0] = 1;
+        arr1[middleX + 2][middleY + 0] = 1;
+        arr1[middleX + 1][middleY + 2] = 1;
+        arr1[middleX + 0][middleY + 4] = 1;
+        arr1[middleX + 1][middleY + 4] = 1;
+        arr1[middleX + 2][middleY + 4] = 1;
+
+
+        middleX = Math.floor(middleX / 2) + 10;
+        middleY = Math.floor(middleY / 2) - 5;
+
+        arr1[middleX + 1][middleY + 0] = 1;
+        arr1[middleX + 2][middleY + 1] = 1;
+
+        arr1[middleX + 0][middleY + 2] = 1;
+        arr1[middleX + 1][middleY + 2] = 1;
+        arr1[middleX + 2][middleY + 2] = 1;
+    }
+
+    var fps = 20;
+    var now;
+    var then = Date.now();
+    var interval = 1000/fps;
+    var delta;
+
+    function draw() {
+
+        requestAnimationFrame(draw);
+
+        now = Date.now();
+        delta = now - then;
+
+        if (delta > interval) {
+
+            then = now - (delta % interval);
+
+            // ...looks better without grid...
+            // draw_grid();
+
+
+            // draw live cells
+            ctx.beginPath();
+            ctx.fillStyle = "#000000";
+            for(var x = 0; x < grid.cols; x++) {
+                for(var y = 0; y < grid.rows; y++) {
+                    if(arr1[x][y] == 1)
+                        fill_square(x,y);
+                }
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // remove dead cells
+            ctx.beginPath();
+            ctx.fillStyle = "white";
+            for(var x = 0; x < grid.cols; x++) {
+                for(var y = 0; y < grid.rows; y++) {
+                    if(arr1[x][y] == 0)
+                        fill_square(x,y);
+                }
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // get new generation
+            tick();
+
+            // swap arrays
+            rotate_arrays();
+
+            // clean the old array
+            arr2 = init_array(grid.cols, grid.width);
+        }
+    }
+
+    draw();
+
+
+</script>
+</html>
