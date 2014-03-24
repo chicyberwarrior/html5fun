@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
+    <style>
+        canvas {
+            padding-left: 0;
+            padding-right: 0;
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+        }
+
+        #score
+        {
+            margin-left: auto;
+            margin-right: auto;
+            margin-bottom: 25px;
+            margin-top: 25px;
+            width: 200px;
+            text-align: center;
+            font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+            font-size: 18pt;
+        }
+
+        #dlg{
+            width:500px;
+            height:500px;
+            display:none;
+        }
+
+        .overlay {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            left: 0;
+            top: 0;
+            background: rgba(51,51,51,0.7);
+            z-index: 10;
+        }
+
+        .menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-left: -300px;
+            margin-top: -350px;
+            background: mediumpurple;
+            z-index: 10;
+
+            height: 300px;
+            width: 600px;
+
+            border-radius: 25px;
+        }
+
+        #btnStartGame {
+            font-size: 24pt;
+            font-weight: bold;
+            font-family: fantasy;
+            position: relative;
+            width: 300px;
+            text-align: center;
+            margin-left: auto;
+            margin-right: auto;
+            background: mediumaquamarine;
+            border-radius: 15px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+    <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/smoothness/jquery-ui.css" />
+</head>
+<body>
+    <div id="overlayMenu" class="overlay">
+        <div class="menu">
+            <div id="btnStartGame">
+                Start!
+            </div>
+        </div>
+    </div>
+    <div id="score"></div>
+    <canvas id="canvas1" width="500px" height="500px" style="border: 1px solid #000000; align-content: center" ></canvas>
+</body>
+<script>
+    $("#btnStartGame").mouseenter(function() {
+        $(this).css('background', 'red');
+    });
+
+    $("#btnStartGame").mouseleave(function() {
+        $(this).css('background', 'mediumaquamarine');
+    });
+
+    $("#btnStartGame").click(function() {
+        state_gameon = true;
+        $(this).hide();
+        $("#overlayMenu").hide();
+    });
+    score = {
+      p1: 0,
+      p2: 0
+    };
+
+    state_gameon = false;
+    state_viewinitialized = false;
+
+    window.canvas = document.getElementById("canvas1");
+    window.ctx = window.canvas.getContext("2d");
+
+    var bkg = new Image();
+    bkg.src = "bkg.jpg";
+    var r1image = new Image();
+    r1image.src = "r13.png";
+    var r2image = new Image();
+    r2image.src = "r23.png";
+
+    var r1 = new Object();
+    r1.pos = canvas.height/2 - 50;
+    r1.height = 100;
+
+    var r2 = new Object();
+    r2.pos = canvas.height/2 - 50;
+    r2.height = 100;
+
+    function getPos(e, pos) {
+        var bbox = canvas.getBoundingClientRect();
+
+        return {
+            x: e.clientX - bbox.left * (canvas.width / bbox.width),
+            y: e.clientY - bbox.top * (canvas.height / bbox.height)
+        }
+    };
+
+    window.canvas.addEventListener('mousemove', function(e) {
+        pos = getPos(e, canvas);
+        r1.pos = pos.y;
+        r2.pos = pos.x;
+    });
+
+    window.onload = function() {
+        document.addEventListener('keydown',
+                function(e) {
+                 /*   e = e || window.event;
+                    if(e.keyCode == '38') {
+                        r1.pos -= 1;
+                    } else if(e.keyCode == '40') {
+                        r1.pos += 1;
+                    } else {
+                        alert(e.keyCode);
+                    }*/
+                }, false);
+    };
+
+    window.canvas.addEventListener('keydown', function(e) {alert(e);}, false);
+
+    function update_score() {
+        var scoreDiv = document.getElementById("score");
+        scoreDiv.innerHTML = score.p1 + ":" + score.p2;
+    };
+
+    function draw_r1() {
+
+        ctx.drawImage(bkg, 0, 0);
+        ctx.drawImage(r1image, 10, r1.pos);
+        ctx.drawImage(r2image, canvas.width - 30, r2.pos);
+
+    };
+
+    function draw_ball() {
+        var gradient = ctx.createRadialGradient(x-5,y-5,5,x-5,y-10,30);
+        gradient.addColorStop(0, 'Magenta');
+        gradient.addColorStop(0.6, 'Blue');
+        gradient.addColorStop(1, 'Blue');
+
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x,y, 20, 0, Math.PI * 2, false);
+        ctx.closePath();
+        ctx.fill();
+    };
+
+    function update(ts) {
+        requestAnimationFrame(update);
+        if(lasttime == 0) lasttime = ts;
+        elapsed += ts - lasttime;
+        lasttime = ts;
+
+        if(!state_viewinitialized) {
+            canvas.width = canvas.width;
+            state_viewinitialized = true;
+            draw_r1();
+            draw_ball();
+        }
+
+        if(elapsed > 10 && state_gameon) {
+            canvas.width = canvas.width;
+            draw_r1();
+
+            draw_ball();
+
+            if(x + 20 >= canvas.width) {
+                // collision
+                xd = xd * -1;
+            }
+
+            if(x - 20 <= 0) {
+                xd = xd * -1;
+            }
+
+            if(y + 20 >= canvas.height) {
+                yd *= -1;
+            }
+            if(y - 20 <= 0) {
+                yd *= -1;
+            }
+
+            if(xd < 0 && (x - 20 >= 28 && x - 20 <= 32) && (y >= r1.pos && y <= r1.pos + r1.height)) {
+                xd *= -1;
+                score.p1 += 1;
+            }
+
+            if(xd > 0 && (x + 20 >= canvas.width - 32 && x + 20 <= canvas.width - 28) && (y >= r2.pos && y <= r2.pos + r2.height)) {
+                xd *= -1;
+                score.p2 += 1;
+            }
+
+
+            x += xd;
+            y += yd;
+
+            update_score();
+        }
+    };
+    var elapsed = 0;
+    var lasttime = 0;
+    var x = canvas.width/2;
+    var y = canvas.height/2;
+    var xd = 5;
+    var yd = 2;
+    requestAnimationFrame(update);
+</script>
+</html>
